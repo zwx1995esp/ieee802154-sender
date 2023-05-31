@@ -59,7 +59,7 @@ void app_main() {
     esp_ieee802154_set_extended_address(long_address);
     esp_ieee802154_set_short_address(SHORT_NOT_CONFIGURED);
 
-#define MAKE_IT_WORK
+// #define MAKE_IT_WORK
 #ifdef MAKE_IT_WORK
     // basically bogus data
     long_address[0] = 8;
