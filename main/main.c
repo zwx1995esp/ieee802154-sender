@@ -5,6 +5,8 @@
 #include <esp_log.h>
 #include <esp_phy_init.h>
 
+#include "esp_mac.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "sdkconfig.h"
@@ -13,9 +15,18 @@
 #define RADIO_TAG "ieee802154"
 
 #define PANID 0x4242
-#define CHANNEL 11
+#define CHANNEL 19
 
 #define SHORT_NOT_CONFIGURED 0xFFFE
+
+// #define PHY_DEBUG
+
+#ifdef PHY_DEBUG
+extern void phy_i2c_check(void);
+extern void phy_reg_check(void);
+extern void phy_cal_print(void);
+extern void pbus_print(void);
+#endif
 
 void esp_ieee802154_receive_done(uint8_t* frame, esp_ieee802154_frame_info_t* frame_info) {
     ESP_EARLY_LOGI(RADIO_TAG, "rx OK, received %d bytes", frame[0]);
@@ -47,13 +58,22 @@ void app_main() {
 
     ESP_ERROR_CHECK(esp_ieee802154_set_channel(CHANNEL));
 
-    esp_phy_calibration_data_t cal_data;
-    ESP_ERROR_CHECK(esp_phy_load_cal_data_from_nvs(&cal_data));
+    // esp_phy_calibration_data_t cal_data;
+    // ESP_ERROR_CHECK(esp_phy_load_cal_data_from_nvs(&cal_data));
 
+#ifdef PHY_DEBUG
+    ESP_LOGI(TAG, "-------------------PHY Init done after boot.----------------------------");
+    phy_i2c_check();
+    phy_reg_check();
+    phy_cal_print();
+    pbus_print();
+#endif
     // Set long address to the mac address (with 0xff padding at the end)
     // Set short address to unconfigured
+
     uint8_t long_address[8];
-    memcpy(&long_address, cal_data.mac, 6);
+    // memcpy(&long_address, cal_data.mac, 6);
+    esp_read_mac(long_address, ESP_MAC_IEEE802154);
     long_address[6] = 0xff;
     long_address[7] = 0xfe;
     esp_ieee802154_set_extended_address(long_address);
@@ -64,6 +84,13 @@ void app_main() {
     // basically bogus data
     long_address[0] = 8;
     esp_ieee802154_transmit(long_address, false);
+#ifdef PHY_DEBUG
+    ESP_LOGI(TAG, "-------------------After IEEE802154 Tx done.----------------------------");
+    phy_i2c_check();
+    phy_reg_check();
+    phy_cal_print();
+    pbus_print();
+#endif
 #endif
 
     uint8_t radio_long_address[8];
@@ -77,6 +104,13 @@ void app_main() {
 
     ESP_ERROR_CHECK(esp_ieee802154_receive());
 
+#ifdef PHY_DEBUG
+    ESP_LOGI(TAG, "-------------------After IEEE802154 Rx start.----------------------------");
+    phy_i2c_check();
+    phy_reg_check();
+    phy_cal_print();
+    pbus_print();
+#endif
     // All done, the rest is up to handlers
     while (true) {
         vTaskDelay(10 / portTICK_PERIOD_MS);
